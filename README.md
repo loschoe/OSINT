@@ -35,7 +35,7 @@ OSINT/
 ## ⚙️ Installation
 1. Cloner le dépôt
 ```bash
-git clone https://github.com/<ton-repo>/OSINT.git
+git clone https://github.com/loschoe/OSINT.git
 cd OSINT
 ```
 3. Installer les dépendances Python
