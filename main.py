@@ -3,8 +3,9 @@ import sys
 
 from modules.analyse_exif import extract_exif_data
 from modules.remove_exif import remove_metadata
-from modules.nmap_scan import scan_ip
 from modules.sherlock import run_sherlock
+from modules.nmap_scan import scan_ip
+from modules.phone_search import search_phone
 from tools.utils import clear_console
 from wcwidth import wcswidth
 
@@ -86,6 +87,7 @@ def main():
         "🧹 Supprimer les métadonnées d'une image",
         "🌐 Sherlock (username)",
         "📡 Scan de ports",
+        "📱 Phone number search",
         "❌ Quitter"
     ]
 
@@ -111,7 +113,10 @@ def main():
             ip = input("\nAdresse IP à scanner : ").strip()
             scan_ip(ip)
             input("\nAppuyez sur Entrée pour revenir au menu...")
-
+        
+        elif choix == 4:
+            search_phone()
+        
 
         else:
             print("\n👋 Au revoir !")
