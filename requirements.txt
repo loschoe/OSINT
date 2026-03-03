@@ -1,0 +1,6 @@
+sherlock-project
+python-nmap
+Pillow
+exifread
+wcwidth
+requests
