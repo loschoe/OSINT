@@ -22,16 +22,28 @@ def get_key():
     import tty, termios
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
+
     try:
         tty.setraw(fd)
-        key = sys.stdin.read(3)
+        ch1 = sys.stdin.read(1)
+
+        # Entrée
+        if ch1 == '\n':
+            return '\n'
+
+        # Séquences spéciales (flèches)
+        if ch1 == '\x1b':  # ESC
+            ch2 = sys.stdin.read(1)
+            ch3 = sys.stdin.read(1)
+            seq = ch1 + ch2 + ch3
+            if seq == '\x1b[A': return 'H'
+            if seq == '\x1b[B': return 'P'
+            return seq
+
+        return ch1
+
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
-
-    if key == '\x1b[A': return 'H'
-    if key == '\x1b[B': return 'P'
-    return key
-
 
 # ───────────────────────────────────────────────
 #  Menu stylé avec navigation au clavier
