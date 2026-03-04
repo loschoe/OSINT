@@ -12,6 +12,7 @@ OSINT Toolkit est un outil codé en python qui permet de rassembler des outils p
 - Suppression EXIF — nettoyage complet des métadonnées sensibles
 - Scan réseau Nmap — détection de ports ouverts et services
 - Recherche Sherlock — recherche de profils sur des centaines de plateformes
+- Recherche d'informations concernant un numéron de téléphone 
 
 ## 📁 Arborescence du projet
 ```
@@ -27,6 +28,7 @@ OSINT/
 │   ├── remove_exif.py
 │   ├── nmap_scan.py
 │   └── sherlock.py
+|   └── phone_search.py
 │
 ├── tools/
     ├── __init__.py
@@ -72,6 +74,7 @@ L’architecture est pensée pour être extensible sans casser le reste du proje
 - Pillow / ExifRead
 - wcwidth
 - requests
+- phonenumbers
 
 📜 Licence
 Projet open-source. Libre d’utilisation, de modification et de distribution.
