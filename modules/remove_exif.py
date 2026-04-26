@@ -1,41 +1,57 @@
 import os
-from PIL import Image
+import piexif
 
-
-def remove_metadata(path, overwrite=False):
+def remove_metadata(image_path, overwrite=False, output_path=None):
     """
-    Supprime toutes les métadonnées d'une image.
+    Supprime toutes les métadonnées EXIF d'une image (JPEG uniquement).
     
-    :param path: chemin de l'image
-    :param overwrite: si True, écrase l'image originale
+    Args:
+        image_path (str): Chemin de l'image à traiter.
+        overwrite (bool): Si True, écrase le fichier original.
+        output_path (str): Chemin de sortie si overwrite=False.
+    
+    Returns:
+        bool: True si suppression réussie, False sinon.
     """
 
-    if not os.path.isfile(path):
-        print("❌ Fichier introuvable.")
-        return
+    if not os.path.isfile(image_path):
+        print(f"[!] Fichier non trouvé : {image_path}")
+        return False
+
+    ext = os.path.splitext(image_path)[1].lower()
+    if ext not in [".jpg", ".jpeg"]:
+        print(f"[!] Format non supporté ({ext}). Seules les images JPEG peuvent contenir des EXIF.")
+        return False
+
+    if overwrite:
+        output_path = image_path
+    else:
+        if output_path is None:
+            # On génère un fichier propre dans ./data/
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            data_dir = os.path.join(script_dir, "data")
+            os.makedirs(data_dir, exist_ok=True)
+
+            filename = os.path.basename(image_path)
+            output_path = os.path.join(data_dir, f"clean_{filename}")
+
+        # Création du dossier si nécessaire
+        output_dir = os.path.dirname(output_path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
 
     try:
-        image = Image.open(path)
+        piexif.remove(image_path, output_path)
 
-        # Copier uniquement les pixels
-        data = list(image.getdata())
-        clean_image = Image.new(image.mode, image.size)
-        clean_image.putdata(data)
+        print("\n" + "=" * 50)
+        print("🧹  MÉTADONNÉES SUPPRIMÉES".center(50))
+        print("=" * 50)
+        print(f"Image traitée : {image_path}")
+        print(f"Image sortie  : {output_path}")
+        print("=" * 50 + "\n")
 
-        if overwrite:
-            save_path = path
-        else:
-            base, ext = os.path.splitext(path)
-            save_path = f"{base}_clean{ext}"
-
-        # Sauvegarde sans EXIF
-        if image.format == "JPEG":
-            clean_image.save(save_path, "JPEG", quality=100)
-        else:
-            clean_image.save(save_path)
-
-        print("🧹 Métadonnées supprimées avec succès.")
-        print(f"💾 Fichier sauvegardé : {save_path}")
+        return True
 
     except Exception as e:
-        print(f"❌ Erreur : {e}")
+        print(f"[!] Erreur lors de la suppression EXIF : {e}")
+        return False

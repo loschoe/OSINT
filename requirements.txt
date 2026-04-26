@@ -1,7 +1,8 @@
-sherlock-project
-python-nmap
-Pillow
 exifread
-wcwidth
-requests
 phonenumbers
+piexif
+wcwidth
+python-nmap
+requests
+beautifulsoup4
+lxml

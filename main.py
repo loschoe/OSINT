@@ -1,22 +1,27 @@
 import os
 import sys
+from wcwidth import wcswidth
 
 from modules.analyse_exif import extract_exif_data
 from modules.remove_exif import remove_metadata
-from modules.sherlock import run_sherlock
+from modules.sherlock import sherlock_scan
 from modules.nmap_scan import scan_ip
+from modules.nmap_carto_scan import scan_network_auto
 from modules.phone_search import search_phone
+from modules.compagny_dork import search_company
+from modules.person_dork import search_person
 from tools.utils import clear_console
-from wcwidth import wcswidth
+
 
 # ───────────────────────────────────────────────
-#  Gestion des touches (Windows + Linux)
+#  Gestion clavier
 # ───────────────────────────────────────────────
+
 def get_key():
     if os.name == 'nt':
         import msvcrt
         key = msvcrt.getch()
-        if key == b'\xe0':  # touche spéciale (flèches)
+        if key == b'\xe0':
             return msvcrt.getch().decode()
         return key.decode()
 
@@ -28,12 +33,10 @@ def get_key():
         tty.setraw(fd)
         ch1 = sys.stdin.read(1)
 
-        # Entrée
         if ch1 == '\n':
             return '\n'
 
-        # Séquences spéciales (flèches)
-        if ch1 == '\x1b':  # ESC
+        if ch1 == '\x1b':
             ch2 = sys.stdin.read(1)
             ch3 = sys.stdin.read(1)
             seq = ch1 + ch2 + ch3
@@ -46,10 +49,12 @@ def get_key():
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
+
 # ───────────────────────────────────────────────
-#  Menu stylé avec navigation au clavier
+#  Menu UI
 # ───────────────────────────────────────────────
-def menu(options):
+
+def menu(title, options):
     index = 0
     width = max(wcswidth(opt) for opt in options) + 4
 
@@ -57,7 +62,7 @@ def menu(options):
         clear_console()
 
         print("╔" + "═" * width + "╗")
-        print("║" + "OUTILS OSINT".center(width) + "║")
+        print("║" + title.center(width) + "║")
         print("╠" + "═" * width + "╣")
 
         for i, opt in enumerate(options):
@@ -70,57 +75,152 @@ def menu(options):
 
         key = get_key()
 
-        if key == 'H':
-            index = (index - 1) % len(options)
-        elif key == 'P':
-            index = (index + 1) % len(options)
-        elif key in ('\r', '\n'):
-            return index
+        match key:
+            case 'H':
+                index = (index - 1) % len(options)
+            case 'P':
+                index = (index + 1) % len(options)
+            case '\r' | '\n':
+                return index
 
 
 # ───────────────────────────────────────────────
-#  Programme principal
+#  Safe runner
 # ───────────────────────────────────────────────
+
+def safe_run(func, *args):
+    try:
+        return func(*args)
+    except Exception as e:
+        print("\n❌ Une erreur est survenue :")
+        print(f"   → {e}")
+    finally:
+        input("\nAppuyez sur Entrée pour continuer...")
+
+
+# ───────────────────────────────────────────────
+#  IDENTITÉ
+# ───────────────────────────────────────────────
+
+def menu_identite():
+    choix = menu("IDENTITÉ", [
+        "🔎 Sherlock (pseudo)",
+        "👤 Profil (nom/prenom)",
+        "💼 Entreprise (Pappers / OSINT)",
+        "📞 Téléphone",
+        "🔙 Retour"
+    ])
+
+    match choix:
+        case 0:
+            username = input("🎯 Pseudo à rechercher : ").strip()
+
+            if not username:
+                print("[-] Pseudo invalide")
+                return
+
+            safe_run(sherlock_scan, username)
+
+        case 1:
+            name = input("👤 Nom / prénom : ").strip()
+
+            if not name:
+                print("[-] Nom invalide")
+                return
+
+            safe_run(search_person, name)
+
+        case 2:
+            name = input("🏢 Nom entreprise : ").strip()
+
+            if not name:
+                print("[-] Nom invalide")
+                return
+
+            safe_run(search_company, name)
+
+        case 3:
+            safe_run(search_phone)
+
+        case 4:
+            return
+
+# ───────────────────────────────────────────────
+#  MÉTADONNÉES
+# ───────────────────────────────────────────────
+
+def menu_metadonnees():
+    choix = menu("MÉTADONNÉES", [
+        "📸 Extraction EXIF",
+        "🧹 Nettoyage EXIF",
+        "🔍 Recherche visuelle (à venir)",
+        "🔙 Retour"
+    ])
+
+    match choix:
+        case 0:
+            path = input("Chemin image : ").strip()
+            safe_run(extract_exif_data, path)
+
+        case 1:
+            path = input("Chemin image : ").strip()
+            overwrite = input("Écraser ? (o/N) : ").lower() == "o"
+            safe_run(remove_metadata, path, overwrite)
+
+        case 2:
+            print("🚧 En développement")
+            input("Entrée...")
+
+        case 3:
+            return
+
+
+# ───────────────────────────────────────────────
+#  RÉSEAU
+# ───────────────────────────────────────────────
+
+def menu_reseaux():
+    choix = menu("RÉSEAUX", [
+        "📡 Scan Nmap",
+        "🌍 Cartographie",
+        "🔙 Retour"
+    ])
+
+    match choix:
+        case 0:
+            ip = input("IP : ").strip()
+            safe_run(scan_ip, ip)
+
+        case 1:
+            safe_run(scan_network_auto)
+
+        case 2:
+            return
+
+
+# ───────────────────────────────────────────────
+#  MAIN
+# ───────────────────────────────────────────────
+
 def main():
-    options = [
-        "📸 Lire les métadonnées EXIF",
-        "🧹 Supprimer les métadonnées d'une image",
-        "🌐 Sherlock (username)",
-        "📡 Scan de ports",
-        "📱 Phone number search",
-        "❌ Quitter"
-    ]
-
     while True:
-        choix = menu(options)
+        choix = menu("OUTILS OSINT", [
+            "👤 Identité",
+            "📷 Métadonnées",
+            "🌐 Réseaux",
+            "❌ Quitter"
+        ])
 
-        if choix == 0:
-            path = input("\nChemin de l'image à analyser : ").strip()
-            extract_exif_data(path)
-            input("\nAppuyez sur Entrée pour revenir au menu...")
-
-        elif choix == 1:
-            path = input("\nChemin de l'image à nettoyer : ").strip()
-            overwrite = input("Écraser le fichier original ? (o/N) : ").strip().lower() == "o"
-            remove_metadata(path, overwrite)
-            input("\nAppuyez sur Entrée pour revenir au menu...")
-
-        elif choix == 2:
-            run_sherlock()
-            input("\nAppuyez sur Entrée pour revenir au menu...")
-
-        elif choix == 3:
-            ip = input("\nAdresse IP à scanner : ").strip()
-            scan_ip(ip)
-            input("\nAppuyez sur Entrée pour revenir au menu...")
-        
-        elif choix == 4:
-            search_phone()
-        
-
-        else:
-            print("\n👋 Au revoir !")
-            break
+        match choix:
+            case 0:
+                menu_identite()
+            case 1:
+                menu_metadonnees()
+            case 2:
+                menu_reseaux()
+            case 3:
+                print("👋 Au revoir !")
+                break
 
 
 if __name__ == "__main__":

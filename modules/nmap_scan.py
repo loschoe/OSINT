@@ -1,4 +1,6 @@
 import subprocess
+import shutil
+from tools.utils import save_report
 
 INTERESTING_SERVICES = [
     "ssh", "http", "https", "ftp",
@@ -7,23 +9,27 @@ INTERESTING_SERVICES = [
 ]
 
 def scan_ip(ip):
+    if not shutil.which("nmap"):
+        print("❌ Nmap non installé.")
+        return
+
     try:
-        print("\n[+] Scan rapide en cours (30s max)...")
+        print("\n[+] Scan discret en cours...")
         print("-" * 50)
 
         result = subprocess.run(
             [
                 "nmap",
-                "-sT",
-                "-F",
-                "-sV",                 
+                "-sS",
+                "--top-ports", "50",
+                "-sV",
                 "--open",
-                "--host-timeout", "30s",
+                "-T2",
                 ip
             ],
             capture_output=True,
             text=True,
-            timeout=35
+            timeout=60
         )
 
         output = result.stdout
@@ -38,24 +44,31 @@ def scan_ip(ip):
                     if interesting in service:
                         found.append(parts)
 
+        report = f"SCAN IP REPORT\nIP: {ip}\n\n"
+
         if found:
-            print("[✔] Services exploitables détectés :\n")
-            print("{:<10} {:<10} {:<15}".format("PORT", "SERVICE", "VERSION"))
+            print("[✔] Services détectés :\n")
+            print("{:<10} {:<10} {:<20}".format("PORT", "SERVICE", "VERSION"))
             print("-" * 50)
+
+            report += "PORT\tSERVICE\tVERSION\n"
 
             for item in found:
                 port = item[0]
                 service = item[2]
                 version = " ".join(item[3:]) if len(item) > 3 else "unknown"
 
-                print("{:<10} {:<15} {:<15}".format(port, service, version))
+                print("{:<10} {:<15} {:<20}".format(port, service, version))
+                report += f"{port}\t{service}\t{version}\n"
+
         else:
-            print("\n[-] Aucun service exploitable détecté.")
+            print("\n[-] Aucun service intéressant détecté.")
+            report += "Aucun service intéressant détecté.\n"
+
+        path = save_report(f"scan_ip_{ip.replace('.', '_')}", report)
+        print(f"\n💾 Rapport sauvegardé : {path}")
 
         print("\n" + "-" * 50)
 
     except subprocess.TimeoutExpired:
-        print("\n[!] Scan interrompu : délai dépassé (30s).")
-
-    except FileNotFoundError:
-        print("Erreur : Nmap non installé.")
+        print("\n[!] Scan interrompu (timeout).")
